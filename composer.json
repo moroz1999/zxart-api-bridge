@@ -1,0 +1,8 @@
+{
+    "require": {
+        "slim/slim": "^4.14",
+        "guzzlehttp/guzzle": "^7.9",
+        "monolog/monolog": "^3.8",
+        "league/csv": "^9.21"
+    }
+}
