@@ -24,7 +24,7 @@ function createFriendlyFileName(array $release, array $file): string
     $fileName = $file['fileName'] ?? '';
     $extension = pathinfo($fileName, PATHINFO_EXTENSION);
 
-    $releaseType = trim($release['releaseType'] ?? '');
+    $releaseType = ucfirst(trim($release['releaseType'] ?? ''));
     $languages = $release['language'] ?? [];
     $langsString = implode(',', array_filter($languages));
 
@@ -61,7 +61,7 @@ function createFriendlyFileName(array $release, array $file): string
         $parts[] = $authorPart;
     }
 
-    $friendly = trim(implode(' - ', $parts));
+    $friendly = trim(implode(', ', $parts));
 
     if ($friendly === '') {
         $friendly = pathinfo($fileName, PATHINFO_FILENAME);
@@ -71,24 +71,25 @@ function createFriendlyFileName(array $release, array $file): string
         $friendly .= '.' . $extension;
     }
 
-    return $friendly;
+    return transliterate($friendly);
 }
 
-function transliterate(string $text): string {
+function transliterate(string $text): string
+{
     $map = [
         'А' => 'A', 'Б' => 'B', 'В' => 'V', 'Г' => 'G', 'Д' => 'D',
         'Е' => 'E', 'Ё' => 'Yo', 'Ж' => 'Zh', 'З' => 'Z', 'И' => 'I',
         'Й' => 'Y', 'К' => 'K', 'Л' => 'L', 'М' => 'M', 'Н' => 'N',
         'О' => 'O', 'П' => 'P', 'Р' => 'R', 'С' => 'S', 'Т' => 'T',
         'У' => 'U', 'Ф' => 'F', 'Х' => 'Kh', 'Ц' => 'Ts', 'Ч' => 'Ch',
-        'Ш' => 'Sh', 'Щ' => 'Shch', 'Ъ' => '',  'Ы' => 'Y', 'Ь' => '',
+        'Ш' => 'Sh', 'Щ' => 'Shch', 'Ъ' => '', 'Ы' => 'Y', 'Ь' => '',
         'Э' => 'E', 'Ю' => 'Yu', 'Я' => 'Ya',
         'а' => 'a', 'б' => 'b', 'в' => 'v', 'г' => 'g', 'д' => 'd',
         'е' => 'e', 'ё' => 'yo', 'ж' => 'zh', 'з' => 'z', 'и' => 'i',
         'й' => 'y', 'к' => 'k', 'л' => 'l', 'м' => 'm', 'н' => 'n',
         'о' => 'o', 'п' => 'p', 'р' => 'r', 'с' => 's', 'т' => 't',
         'у' => 'u', 'ф' => 'f', 'х' => 'kh', 'ц' => 'ts', 'ч' => 'ch',
-        'ш' => 'sh', 'щ' => 'shch', 'ъ' => '',  'ы' => 'y', 'ь' => '',
+        'ш' => 'sh', 'щ' => 'shch', 'ъ' => '', 'ы' => 'y', 'ь' => '',
         'э' => 'e', 'ю' => 'yu', 'я' => 'ya'
     ];
     return strtr($text, $map);
@@ -112,7 +113,7 @@ $app->get('/', function (Request $request, Response $response, array $args) use 
     $apiUrl = "api/export:zxRelease/start:{$offset}/limit:10/order:title,desc/"
         . "filter:zxProdAjaxSearch={$searchTerm};"
         . "zxProdStatus=allowed,forbidden,allowedzxart,recovered,unknown;"
-        . "zxReleaseFormat=tzx,sna,tap,trd,scl/"
+        . "zxReleaseFormat=tzx,sna,tap,trd,scl,tar/"
         . "preset:zxdb";
     try {
         $log->info("Fetching from ZX-Art: search='{$searchTerm}' (page: {$page}, offset: {$offset})");
@@ -188,7 +189,6 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
         $file = $playableFiles[$fileIndex];
         $fileId = $file['id'];
         $fileName = $file['fileName'];
-        $friendlyName = createFriendlyFileName($release, $file);
 
         $downloadUrl = "https://zxart.ee/zxfile/id:{$releaseId}/fileId:{$fileId}/" . urlencode($fileName);
         $log->info("Downloading file: {$downloadUrl}");
@@ -208,7 +208,7 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
         return $response
             ->withHeader('Content-Length', $binaryLength)
             ->withHeader('Content-Type', 'application/octet-stream')
-            ->withHeader('Content-Disposition', 'attachment; filename="' . $friendlyName . '"');
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"');
 
     } catch (Exception $e) {
         $log->error("Download error: " . $e->getMessage());
