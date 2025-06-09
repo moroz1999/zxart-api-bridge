@@ -19,6 +19,61 @@ $client = new Client([
     'timeout' => 10.0,
 ]);
 
+function createFriendlyFileName(array $release, array $file): string
+{
+    $fileName = $file['fileName'] ?? '';
+    $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+
+    $releaseType = trim($release['releaseType'] ?? '');
+    $languages = $release['language'] ?? [];
+    $langsString = implode(',', array_filter($languages));
+
+    $releaser = '';
+    if (!empty($release['authorsInfoShort'][0]['title'])) {
+        $releaser = $release['authorsInfoShort'][0]['title'];
+    } elseif (!empty($release['publishersInfo'][0]['title'])) {
+        $releaser = $release['publishersInfo'][0]['title'];
+    }
+
+    $year = $release['year'] ?? '';
+    if ($year === '????') {
+        $year = '';
+    }
+
+    $parts = [];
+
+    $typePart = '';
+    if ($releaseType !== '') {
+        $typePart = $releaseType;
+    }
+    if ($langsString !== '') {
+        if ($typePart !== '') {
+            $typePart .= ' ';
+        }
+        $typePart .= '(' . $langsString . ')';
+    }
+    if ($typePart !== '') {
+        $parts[] = $typePart;
+    }
+
+    $authorPart = trim($releaser . ($year ? ' ' . $year : ''));
+    if ($authorPart !== '') {
+        $parts[] = $authorPart;
+    }
+
+    $friendly = trim(implode(' - ', $parts));
+
+    if ($friendly === '') {
+        $friendly = pathinfo($fileName, PATHINFO_FILENAME);
+    }
+
+    if ($extension !== '') {
+        $friendly .= '.' . $extension;
+    }
+
+    return $friendly;
+}
+
 $app->get('/', function (Request $request, Response $response, array $args) use ($log, $client) {
     $queryParams = $request->getQueryParams();
     $searchTerm = $queryParams['s'] ?? '';
@@ -57,7 +112,9 @@ $app->get('/', function (Request $request, Response $response, array $args) use 
 
             $output .= "^" . ($release['id'] ?? '0') . "^";
             $output .= ($release['title'] ?? 'Unknown') . "^";
-            $output .= ($playableFile['fileName'] ?? 'Unknown') . "^";
+            $friendly = createFriendlyFileName($release, $playableFile);
+
+            $output .= $friendly . "^";
             $output .= ($playableFile['size'] ?? 0) . "^";
             $output .= count($playableFiles) . "^";
             $output .= ($release['year'] ?? '????') . "^\n";
@@ -109,6 +166,7 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
         $file = $playableFiles[$fileIndex];
         $fileId = $file['id'];
         $fileName = $file['fileName'];
+        $friendlyName = createFriendlyFileName($release, $file);
 
         $downloadUrl = "https://zxart.ee/zxfile/id:{$releaseId}/fileId:{$fileId}/" . urlencode($fileName);
         $log->info("Downloading file: {$downloadUrl}");
@@ -127,7 +185,7 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
         $response->getBody()->write($binaryContent);
         return $response
             ->withHeader('Content-Type', 'application/octet-stream')
-            ->withHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $friendlyName . '"')
             ->withHeader('Content-Length', $binaryLength);
 
     } catch (Exception $e) {
