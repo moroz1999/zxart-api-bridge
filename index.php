@@ -66,8 +66,8 @@ $app->get('/', function (Request $request, Response $response, array $args) use 
         $contentLength = strlen($output);
         $response->getBody()->write($output);
         return $response
-            ->withHeader('Content-Type', '')
-            ->withHeader('Content-Length', $contentLength);
+            ->withHeader('Content-Length', $contentLength)
+            ->withHeader('Content-Type', '');
 
     } catch (Exception $e) {
         $log->error("API error: " . $e->getMessage());
@@ -126,9 +126,9 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
 
         $response->getBody()->write($binaryContent);
         return $response
+            ->withHeader('Content-Length', $binaryLength)
             ->withHeader('Content-Type', 'application/octet-stream')
-            ->withHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"')
-            ->withHeader('Content-Length', $binaryLength);
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"');
 
     } catch (Exception $e) {
         $log->error("Download error: " . $e->getMessage());
