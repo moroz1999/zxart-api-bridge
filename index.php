@@ -21,8 +21,9 @@ $client = new Client([
 
 function createFriendlyFileName(array $release, array $file): string
 {
-    $fileName = $file['fileName'] ?? '';
-    $extension = pathinfo($fileName, PATHINFO_EXTENSION);
+    $origName = $file['fileName'] ?? '';
+    $fileName = pathinfo($origName, PATHINFO_FILENAME);
+    $extension = pathinfo($origName, PATHINFO_EXTENSION);
 
     $releaseType = ucfirst(trim($release['releaseType'] ?? ''));
     $languages = $release['language'] ?? [];
@@ -40,11 +41,11 @@ function createFriendlyFileName(array $release, array $file): string
         $year = '';
     }
 
-    $parts = [];
+    $parts = [trim(substr($fileName, 0, 8))];
 
     $typePart = '';
     if ($releaseType !== '') {
-        $typePart = $releaseType;
+        $typePart = substr($releaseType, 0 , 4).'.';
     }
     if ($langsString !== '') {
         if ($typePart !== '') {
@@ -61,10 +62,10 @@ function createFriendlyFileName(array $release, array $file): string
         $parts[] = $authorPart;
     }
 
-    $friendly = trim(implode(', ', $parts));
+    $friendly = trim(implode(' ', $parts));
 
     if ($friendly === '') {
-        $friendly = pathinfo($fileName, PATHINFO_FILENAME);
+        $friendly = pathinfo($origName, PATHINFO_FILENAME);
     }
 
     if ($extension !== '') {
@@ -188,9 +189,9 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
 
         $file = $playableFiles[$fileIndex];
         $fileId = $file['id'];
-        $fileName = $file['fileName'];
+        $origName = $file['fileName'];
 
-        $downloadUrl = "https://zxart.ee/zxfile/id:{$releaseId}/fileId:{$fileId}/" . urlencode($fileName);
+        $downloadUrl = "https://zxart.ee/zxfile/id:{$releaseId}/fileId:{$fileId}/" . urlencode($origName);
         $log->info("Downloading file: {$downloadUrl}");
 
         $fileResponse = $client->request('GET', $downloadUrl, [
@@ -208,7 +209,7 @@ $app->get('/get/{id}[/{option}]', function (Request $request, Response $response
         return $response
             ->withHeader('Content-Length', $binaryLength)
             ->withHeader('Content-Type', 'application/octet-stream')
-            ->withHeader('Content-Disposition', 'attachment; filename="' . $fileName . '"');
+            ->withHeader('Content-Disposition', 'attachment; filename="' . $origName . '"');
 
     } catch (Exception $e) {
         $log->error("Download error: " . $e->getMessage());
